@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Shiva Solar - Customer Calling</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--blue:#1769e0;--dark:#10233f;--green:#19a463;--wa:#25d366;--bg:#eef3f8;--card:#fff;--text:#17202a;--muted:#718096}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Arial,"Noto Sans Devanagari",sans-serif;color:var(--text)}
+.header{background:linear-gradient(135deg,#0d47a1,#1769e0);color:#fff;padding:17px 14px 16px;position:sticky;top:0;z-index:20;box-shadow:0 3px 12px #0003}
+.header .title{font-size:21px;font-weight:800}.header .sub{font-size:12px;opacity:.9;margin-top:4px}
+.container{max-width:700px;margin:auto;padding:11px}
+.card{background:var(--card);border-radius:16px;padding:12px;margin-bottom:11px;box-shadow:0 3px 14px #17324d12}
+.upload{display:block;border:2px dashed #80aeea;border-radius:14px;padding:17px;text-align:center;color:var(--blue);background:#f7fbff}
+.upload input{display:none}.upload b{font-size:16px}
+.fileinfo{font-size:11px;color:var(--muted);margin-top:8px;text-align:center}
+.search{position:relative}.search input{padding-left:38px}
+.search span{position:absolute;left:12px;top:10px;font-size:18px}
+input,select{width:100%;height:42px;border:1px solid #d6dee8;border-radius:10px;padding:8px 10px;background:#fff;font-size:14px;outline:none}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #1769e015}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+.stat{background:#f3f7fc;border-radius:11px;padding:9px 5px;text-align:center}.stat strong{display:block;font-size:18px;color:var(--blue)}.stat span{font-size:10px;color:var(--muted)}
+.section{display:flex;align-items:center;justify-content:space-between;margin:13px 2px 8px}
+.section h2{font-size:16px;margin:0}.pill{font-size:11px;background:#e8f7ef;color:#16834e;padding:5px 8px;border-radius:20px;font-weight:bold}
+.list{max-height:58vh;overflow-y:auto;padding:2px;scroll-behavior:smooth}
+.customer{background:#fff;border:1px solid #e2e8f0;border-radius:15px;margin-bottom:9px;padding:11px;box-shadow:0 2px 8px #0000000c}
+.customer.called{border-left:4px solid var(--green);background:#fbfffd}
+.c-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.c-name{font-size:15px;font-weight:800;line-height:1.35}.c-no{font-size:10px;color:var(--muted);margin-top:3px}
+.badge{font-size:10px;background:#edf4ff;color:#1769e0;border-radius:20px;padding:5px 7px;white-space:nowrap}
+.details{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.detail{background:#f7f9fb;border-radius:9px;padding:7px}.label{font-size:9px;color:#8793a0}.value{font-size:12px;font-weight:700;margin-top:2px;word-break:break-word}
+.address{margin-top:7px;background:#f7f9fb;border-radius:9px;padding:7px}.address .value{font-weight:600}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.btn{border:0;border-radius:10px;height:42px;font-weight:800;font-size:13px;color:#fff;cursor:pointer}
+.call{background:var(--green)}.wa{background:var(--wa)}.reset{background:#eef1f5;color:#4c5968;border:0;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:bold}
+.empty{text-align:center;padding:28px 10px;color:#8793a0;font-size:13px}
+.hide{display:none!important}
+@media(max-width:380px){.filters{grid-template-columns:1fr}.details{grid-template-columns:1fr 1fr}.header .title{font-size:19px}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="container" style="padding:0">
+    <div class="title">📞 Shiva Solar Customer Calling</div>
+    <div class="sub">Customer को Call करें → Call के बाद WhatsApp से Solar संदेश भेजें</div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="card">
+    <label class="upload">
+      <input id="file" type="file" accept=".xlsx,.xls,.csv">
+      <div style="font-size:28px">📂</div>
+      <b>Excel File Upload करें</b>
+      <div style="font-size:11px;margin-top:5px;color:#718096">.xlsx / .xls / .csv — पूरी list अपने-आप लोड होगी</div>
+    </label>
+    <div id="fileInfo" class="fileinfo">अभी कोई Excel file नहीं चुनी गई</div>
+  </div>
+
+  <div class="card">
+    <div class="search"><span>🔎</span><input id="search" placeholder="नाम, Consumer No या Mobile खोजें"></div>
+    <div class="filters">
+      <select id="addressFilter"><option value="">📍 सभी गाँव / Address</option></select>
+      <select id="statusFilter">
+        <option value="pending">📞 Call बाकी</option>
+        <option value="called">✅ Call हो चुके</option>
+        <option value="all">📋 सभी Customer</option>
+      </select>
+    </div>
+    <div class="filters">
+      <select id="nameFilter"><option value="">👤 सभी नाम</option></select>
+      <button class="reset" onclick="resetCalls()">↻ Call Status Reset</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><strong id="total">0</strong><span>कुल Customer</span></div>
+      <div class="stat"><strong id="pending">0</strong><span>Call बाकी</span></div>
+      <div class="stat"><strong id="calledCount">0</strong><span>Call हो चुके</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 id="listTitle">📞 Call करने वाले Customer</h2>
+    <span class="pill" id="shown">0</span>
+  </div>
+  <div class="list" id="customerList">
+    <div class="card empty">पहले Excel file upload करें</div>
+  </div>
+</main>
+
+<script>
+let rows=[],called=new Set();
+
+const aliases={
+consumerNo:["Consumer No","Consumer Number","ConsumerNo"],
+load:["Sanctioned Load","Sanction Load","SanctionedLoad"],
+unit:["Sanctioned Load Unit","Load Unit","Unit"],
+name:["Consumer Name Hindi","Consumer Name","Name Hindi"],
+address:["Address1 Hindi","Address Hindi","Address","Address1"],
+mobile:["Mobile No","Mobile Number","Mobile"],
+assessment:["Assessment"],
+billed:["Billed Unit","Billed Units","BilledUnit"],
+netbill:["Net Bill","NetBill","Net Bill Amount"]
+};
+function norm(x){return String(x??"").trim().toLowerCase().replace(/[_-]/g," ").replace(/\s+/g," ")}
+function key(r,type){let ks=Object.keys(r);for(let a of aliases[type]){let k=ks.find(x=>norm(x)===norm(a));if(k)return k}for(let a of aliases[type]){let k=ks.find(x=>norm(x).includes(norm(a)));if(k)return k}return null}
+function val(r,t){let k=key(r,t);return k?r[k]:""}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function phone(v){return String(v??"").replace(/\D/g,"").replace(/^0+/,"")}
+
+document.getElementById("file").onchange=e=>{
+ let f=e.target.files[0];if(!f)return;
+ let rd=new FileReader();
+ rd.onload=x=>{
+  try{
+   let wb=XLSX.read(new Uint8Array(x.target.result),{type:"array"});
+   rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+   called=new Set();
+   document.getElementById("fileInfo").textContent=`${f.name} • ${rows.length} Customer`;
+   filters();render();
+  }catch(err){alert("Excel पढ़ने में समस्या हुई।")}
+ };
+ rd.readAsArrayBuffer(f);
+};
+function filters(){
+ let a=document.getElementById("addressFilter"),n=document.getElementById("nameFilter");
+ a.innerHTML='<option value="">📍 सभी गाँव / Address</option>';
+ n.innerHTML='<option value="">👤 सभी नाम</option>';
+ [...new Set(rows.map(r=>val(r,"address")).filter(x=>String(x).trim()))].sort((a,b)=>String(a).localeCompare(String(b),"hi")).forEach(x=>a.add(new Option(x,x)));
+ [...new Set(rows.map(r=>val(r,"name")).filter(x=>String(x).trim()))].sort((a,b)=>String(a).localeCompare(String(b),"hi")).forEach(x=>n.add(new Option(x,x)));
+}
+["search","addressFilter","nameFilter","statusFilter"].forEach(id=>document.getElementById(id).oninput=render);
+
+function match(r,i){
+ let q=norm(document.getElementById("search").value),a=document.getElementById("addressFilter").value,n=document.getElementById("nameFilter").value,s=document.getElementById("statusFilter").value;
+ if(s==="pending"&&called.has(i))return false;if(s==="called"&&!called.has(i))return false;
+ if(a&&String(val(r,"address"))!==a)return false;if(n&&String(val(r,"name"))!==n)return false;
+ if(q&&!([val(r,"consumerNo"),val(r,"name"),val(r,"address"),val(r,"mobile")].map(norm).join(" ").includes(q)))return false;
+ return true;
+}
+function card(r,i){
+ let done=called.has(i);
+ return `<div class="customer ${done?"called":""}">
+  <div class="c-top"><div><div class="c-name">${esc(val(r,"name"))||"नाम उपलब्ध नहीं"}</div><div class="c-no">Consumer No: ${esc(val(r,"consumerNo"))}</div></div><span class="badge">${done?"✅ Called":"📞 Pending"}</span></div>
+  <div class="address"><div class="label">📍 ADDRESS / गाँव</div><div class="value">${esc(val(r,"address"))||"-"}</div></div>
+  <div class="details">
+   <div class="detail"><div class="label">📱 MOBILE</div><div class="value">${esc(val(r,"mobile"))||"-"}</div></div>
+   <div class="detail"><div class="label">⚡ LOAD</div><div class="value">${esc(val(r,"load"))} ${esc(val(r,"unit"))}</div></div>
+   <div class="detail"><div class="label">🧾 ASSESSMENT</div><div class="value">${esc(val(r,"assessment"))||"0"}</div></div>
+   <div class="detail"><div class="label">📊 BILLED UNIT</div><div class="value">${esc(val(r,"billed"))||"0"}</div></div>
+   <div class="detail"><div class="label">💰 NET BILL</div><div class="value">₹ ${esc(val(r,"netbill"))||"0"}</div></div>
+  </div>
+  <div class="actions">${done
+   ? `<button class="btn wa" onclick="whatsapp(${i})">💬 WhatsApp भेजें</button><button class="btn call" onclick="callAgain(${i})">📞 Call Again</button>`
+   : `<button class="btn call" onclick="call(${i})">📞 Call Customer</button><button class="btn" style="background:#6c757d" onclick="markOnly(${i})">✓ Called Mark करें</button>`}
+  </div>
+ </div>`;
+}
+function render(){
+ let list=document.getElementById("customerList"),arr=[];
+ rows.forEach((r,i)=>{if(match(r,i))arr.push(card(r,i))});
+ list.innerHTML=arr.length?arr.join(""):`<div class="card empty">कोई Customer नहीं मिला। Filter बदलकर देखें।</div>`;
+ let st=document.getElementById("statusFilter").value;
+ document.getElementById("listTitle").textContent=st==="called"?"✅ Call हो चुके Customer":st==="all"?"📋 सभी Customer":"📞 Call करने वाले Customer";
+ document.getElementById("shown").textContent=arr.length+" दिख रहे";
+ document.getElementById("total").textContent=rows.length;
+ document.getElementById("pending").textContent=rows.length-called.size;
+ document.getElementById("calledCount").textContent=called.size;
+}
+function markOnly(i){called.add(i);save();render()}
+function call(i){
+ called.add(i);save();render();
+ let p=phone(val(rows[i],"mobile"));if(!p){alert("Mobile number नहीं मिला");return}
+ window.location.href="tel:"+(p.length===10?"91"+p:p);
+}
+function callAgain(i){
+ let p=phone(val(rows[i],"mobile"));if(!p){alert("Mobile number नहीं मिला");return}
+ window.location.href="tel:"+(p.length===10?"91"+p:p);
+}
+function whatsapp(i){
+ let r=rows[i],p=phone(val(r,"mobile"));if(!p){alert("Mobile number नहीं मिला");return}
+ let msg=`Shiva Solar Solution से जुड़ने के लिए बहुत-बहुत धन्यवाद। ${val(r,"name")?val(r,"name")+" जी, ":""}आपका दिन शुभ हो।\nZero Investment में Solar लगवाने के लिए जरूर संपर्क कीजिए।\nमोबाइल: 7648814768`;
+ window.open("https://wa.me/"+(p.length===10?"91"+p:p)+"?text="+encodeURIComponent(msg),"_blank");
+}
+function save(){try{localStorage.setItem("shiva_solar_called",JSON.stringify([...called]))}catch(e){}}
+function resetCalls(){if(confirm("सभी Call Status Reset करें?")){called.clear();save();render()}}
+</script>
+</body>
+</html>
